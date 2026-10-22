@@ -1,6 +1,6 @@
-import pickle
 import numpy as np
 import pandas as pd
+import pickle
 import streamlit as st
 
 # Page configuration
@@ -14,8 +14,6 @@ st.set_page_config(
 # Load the saved model
 @st.cache_resource
 def load_model():
-    # Replace 'model.pkl' with your exact pickle file name if different,
-    # ensuring you do not change the original pkl file name itself.
     with open("svmc.pkl", "rb") as file:
         model = pickle.load(file)
     return model
@@ -96,20 +94,48 @@ st.divider()
 
 # Prediction Button
 if st.button("Run Prediction", type="primary", use_container_width=True):
-    # Construct input dataframe matching the expected features
-    # Note: Depending on how your model was trained (e.g., if it uses OneHotEncoding),
-    # ensure input formatting aligns with the pipeline pipeline/encoder requirements.
+
+    # --- CATEGORICAL MAPPING (मॅन्युअल नंबर रूपांतरण) ---
+    # टीप: तुमच्या मॉडेलला ज्या क्रमाने (0, 1, 2...) डेटा ट्रेन केला होता, त्यानुसार खालील मॅपिंग जुळवून घ्या.
+    gender_mapping = {"Male": 0, "Female": 1, "Other": 2}
+    family_mapping = {"No": 0, "Yes": 1}
+    activity_mapping = {"Low": 0, "Moderate": 1, "High": 2}
+    diet_mapping = {
+        "Standard": 0,
+        "Vegetarian": 1,
+        "Vegan": 2,
+        "Keto": 3,
+        "Mediterranean": 4,
+    }
+    smoking_mapping = {"Never": 0, "Former": 1, "Current": 2}
+    alcohol_mapping = {"None": 0, "Low": 1, "Moderate": 2, "High": 3}
+    income_mapping = {"Low": 0, "Medium": 1, "High": 2, "Very High": 3}
+
+    # City साठी साधे Hash किंवा Label Encoding (किंवा तुमच्या कोडिंगनुसार बदलू शकता)
+    # सध्या आपण hash वापरत आहोत जेणेकरून एरर येणार नाही:
+    city_encoded = abs(hash(city)) % 100
+
+    # Encoded Values
+    gender_enc = gender_mapping.get(gender, 0)
+    family_enc = family_mapping.get(family_history_diabetes, 0)
+    activity_enc = activity_mapping.get(physical_activity_level, 0)
+    diet_enc = diet_mapping.get(diet_type, 0)
+    smoking_enc = smoking_mapping.get(smoking_status, 0)
+    alcohol_enc = alcohol_mapping.get(alcohol_consumption, 0)
+    income_enc = income_mapping.get(income_bracket, 0)
+
+    # Construct input dataframe with numbers
     input_data = pd.DataFrame(
         {
             "age": [age],
-            "gender": [gender],
-            "city": [city],
+            "gender": [gender_enc],
+            "city": [city_encoded],
             "bmi": [bmi],
-            "family_history_diabetes": [family_history_diabetes],
-            "physical_activity_level": [physical_activity_level],
-            "diet_type": [diet_type],
-            "smoking_status": [smoking_status],
-            "alcohol_consumption": [alcohol_consumption],
+            "family_history_diabetes": [family_enc],
+            "physical_activity_level": [activity_enc],
+            "diet_type": [diet_enc],
+            "smoking_status": [smoking_enc],
+            "alcohol_consumption": [alcohol_enc],
             "hours_sleep_per_night": [hours_sleep_per_night],
             "stress_level": [stress_level],
             "fasting_blood_sugar": [fasting_blood_sugar],
@@ -117,7 +143,7 @@ if st.button("Run Prediction", type="primary", use_container_width=True):
             "blood_pressure_systolic": [blood_pressure_systolic],
             "blood_pressure_diastolic": [blood_pressure_diastolic],
             "waist_circumference_cm": [waist_circumference_cm],
-            "income_bracket": [income_bracket],
+            "income_bracket": [income_enc],
         }
     )
 
@@ -132,6 +158,4 @@ if st.button("Run Prediction", type="primary", use_container_width=True):
                 f"Prediction Confidence / Probabilities: `{np.max(proba)*100:.2f}%`"
             )
     except Exception as e:
-        st.error(
-            f"Error during prediction. Make sure categorical features match training encoding: {e}"
-        )
+        st.error(f"Error during prediction: {e}")
